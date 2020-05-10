@@ -38,9 +38,9 @@ from Crypto.Cipher import AES
 from protocol_parser import unpack_msg, calc_msg_checksum
 
 DEBUG_MSG = True
-DEBUG_PRINT_STAT_MSG = False #print status messages
-DEBUG_PRINT_KEEP_CONNECT = False #print "keelconnect" packets
-SEND_ENCRYPTED = False #use AES encryted comms with kettle
+DEBUG_PRINT_STAT_MSG = False  # print status messages
+DEBUG_PRINT_KEEP_CONNECT = False  # print "keelconnect" packets
+SEND_ENCRYPTED = False  # use AES encryted comms with kettle
 MSGLEN = 3200  # max msg length: this needs to be long enough to allow a few msg to be received
 
 KETTLE_SOCKET_CONNECT_ATTEMPTS = 3
@@ -50,7 +50,9 @@ KEEP_WARM_MINS = 30  # Default keep warm amount
 ENCRYPT_HEADER = bytes([0x23, 0x23, 0x38, 0x30])
 PLAIN_HEADER = bytes([0x23, 0x23, 0x30, 0x30])
 MSG_KEEP_CONNECT = b"##000bKeepConnect&&"
-MSG_KEEP_CONNECT_FREQ_SECS = 30  # sends a KeepConnect to keep connection live (e.g. app open)
+MSG_KEEP_CONNECT_FREQ_SECS = (
+    30  # sends a KeepConnect to keep connection live (e.g. app open)
+)
 UDP_IP_BCAST = "255.255.255.255"
 UDP_PORT = 15103
 
@@ -396,7 +398,7 @@ def cb_mqtt_on_connect(client, kettle, flags, rec_code):
 def cb_mqtt_on_message(mqttc, kettle, msg):
     """ The callback for when a PUBLISH message is received from the server. """
     print("MQTT MSG: " + msg.topic + " : " + str(msg.payload))
-    kettle.wake() #wake up kettle when receiving a command
+    kettle.wake()  # wake up kettle when receiving a command
 
     if msg.topic == MQTT_CMD_TOPIC + "/power":
         if msg.payload == b"ON":
