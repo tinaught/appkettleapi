@@ -1,0 +1,11 @@
+[Unit]
+Description=MTTQ Appkettle
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/appkettle_mqtt.py --port 6002 [KETTLE IP] [IMEI] --mqtt [MQTT BROKER HOST] [MQTT BROKER PORT]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
