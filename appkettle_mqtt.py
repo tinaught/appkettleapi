@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 """Provides a running daemon for interfacing with an appKettle
 
-usage: appkettle_mqtt.py [-h] [--mqtt host port] host imei
+usage: appkettle_mqtt.py [-h] [--mqtt host port] [host] [imei]
 
 arguments:
   host              kettle host or IP
@@ -11,11 +11,13 @@ optional arguments:
   -h, --help        show this help message and exit
   --mqtt host port  MQTT broker host and port (e.g. --mqtt 192.168.0.1 1883)
 
-By default the both kettle and app talk via the cloud, blocking internet access for
-the kettle host, triggers local port communication
+By default the both kettle and app talk via the cloud. Blocking internet access to
+the kettle host triggers communication on local network
 
-Pressing Ctrl+C while this program is connected enters into a simple debuggin command interface:
-see function cb_signal_handler for debugging
+To find the IMEI and IP of the kettle run program without parameters
+
+Pressing Ctrl+C while this program is connected enters into a simple debug interface:
+see function cb_signal_handler for available commands
 
 To log and debug traffic from Android app, install tcpdump on a rooted Android phone:
 - adb shell
@@ -83,7 +85,7 @@ class AppKettle:
         }
 
     def tick(self):
-        """Increments seq by 1. To be called when sending something"""
+        """Increments seq by 1. To be called when sending something to kettle"""
         self.stat["seq"] = (self.stat["seq"] + 1) % 0xFF  # cap at 1 byte
 
     def turn_on(self, temp=None):
@@ -124,7 +126,7 @@ class AppKettle:
         return self.sock.send_enc(msg)
 
     def status_json(self):
-        """Returns JSON message with the status of the kettle"""
+        """Returns JSON message with the key status of the kettle"""
         status_dict = {
             key: self.stat[key]
             for key in self.stat.keys()
@@ -150,6 +152,7 @@ class AppKettle:
             return
 
         if isinstance(msg, (str, bytes, type(None))):
+            # decoding didn't return anything interesting for us
             return
 
         if "data3" in msg:
@@ -159,6 +162,7 @@ class AppKettle:
                 print("Error in data3 cmd_dict: ", cmd_dict)
                 return
         elif "data2" in msg:
+            # this means it's a message we sent. Only useful for debugging tcpdump traffic
             pass
         else:
             print("Unparsed Json message: ", cmd_dict)
@@ -500,6 +504,12 @@ def main_loop(host_port, imei, mqtt_broker):
     signal.signal(signal.SIGINT, cb_signal_handler)
     timestamp = time.time()
 
+    if host_port[0] is None:
+        kettle.sock.close()
+        print("Run again with all parameters - exiting")
+        sys.exit(0)
+        return
+
     while True:
         if not kettle_socket.connected:
             kettle_socket.connect(host_port)
@@ -543,8 +553,8 @@ def main_loop(host_port, imei, mqtt_broker):
 def argparser():
     """Parses input arguments, see -h"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("host", help="kettle host or IP")
-    parser.add_argument("imei", help="kettle imei (e.g. GD0-12300-35aa)")
+    parser.add_argument("host", nargs="?", help="kettle host or IP")
+    parser.add_argument("imei", nargs="?", help="kettle IMEI (e.g. GD0-12300-35aa)")
     parser.add_argument(
         "--port", help="kettle port (default 6002)", default=6002, type=int
     )
@@ -555,6 +565,7 @@ def argparser():
         nargs=2,
         metavar=("host", "port"),
     )
+
     args = parser.parse_args()
     main_loop((args.host, args.port), args.imei, args.mqtt)
 
