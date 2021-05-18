@@ -34,13 +34,21 @@ function setup_ci_environment::install_docker_buildx() {
     exit 1
   fi
 
+  # uninstall old versions
+  sudo apt-get remove -y docker docker-engine docker.io containerd runc
+
   ## Install up-to-date version of docker, with buildx support.
-  local -r docker_apt_repo='https://download.docker.com/linux/ubuntu'
-  curl -fsSL "${docker_apt_repo}/gpg" | sudo apt-key add -
-  local -r os="$(lsb_release -cs)"
-  sudo add-apt-repository "deb [arch=amd64] $docker_apt_repo $os stable"
+  # Set up the repository
   sudo apt-get update
-  sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+  sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+  # Add Docker’s official GPG key
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  # Install Docker Engine
+  sudo apt-get update
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
   # Enable docker daemon experimental support (for 'docker pull --platform').
   local -r config='/etc/docker/daemon.json'
