@@ -469,7 +469,7 @@ def main_loop(host_port, imei, mqtt_broker):
         mqttc.on_message = cb_mqtt_on_message
         mqttc.user_data_set(kettle)  # passes to each callback $kettle as $userdata
         mqttc.will_set("stat/" + MQTT_BASE + "/status", "Disconnected", retain=True)
-        mqttc.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSQORD)
+        mqttc.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSWORD)
         mqttc.connect(mqtt_broker[0], int(mqtt_broker[1]))
         mqttc.loop_start()
 
@@ -586,8 +586,7 @@ def argparser():
                 args.host = kettle_info["kettleIP"]
                 args.imei = kettle_info["imei"]
 
-        print(args)
-        # main_loop((args.host, args.port), args.imei, args.mqtt)
+        main_loop((args.host, args.port), args.imei, args.mqtt)
     except (TimeoutError, OSError) as err:
             print("Auto config failed: ", err)
 
