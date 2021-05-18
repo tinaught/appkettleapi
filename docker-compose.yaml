@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  appkettle:
+    image: grewhit25/appkettleapi
+    container_name: appkettle
+    network_mode: 'host'
+    environment:
+      MQTT_USERNAME: ''
+      MQTT_PASSWORD: ''
+      MQTT_BROKER: '127.0.0.1'
+      MQTT_PORT: '1883'
+      KETTLE_BROADCAST_ADDRESS: '255.255.255.255'
+      KETTLE_IP: 'None'
+      KETTLE_IMEI: 'None'

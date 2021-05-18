@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv sh
+
+cd /kettle
+exec python appkettle_mqtt.py --mqtt $MQTT_BROKER $MQTT_PORT $KETTLE_IP $KETTLE_IMEI;

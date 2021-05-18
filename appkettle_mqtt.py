@@ -27,6 +27,7 @@ To log and debug traffic from Android app, install tcpdump on a rooted Android p
     pipe traffic to wireshark (nc localhost 11111 | wireshark -k -S -i -)
 """
 
+import os
 import sys
 import time
 import socket
@@ -55,7 +56,7 @@ MSG_KEEP_CONNECT = b"##000bKeepConnect&&"
 MSG_KEEP_CONNECT_FREQ_SECS = (
     30  # sends a KeepConnect to keep connection live (e.g. app open)
 )
-UDP_IP_BCAST = "255.255.255.255"
+UDP_IP_BCAST = os.environ.get('KETTLE_BROADCAST_ADDRESS')
 UDP_PORT = 15103
 
 MQTT_BASE = "appKettle"
@@ -65,6 +66,13 @@ MQTT_CMD_TOPIC = "cmnd/" + MQTT_BASE
 SECRET_KEY = b"ay3$&dw*ndAD!9)<"
 SECRET_IV = b"7e3*WwI(@Dczxcue"
 
+# get env variables
+MQTT_USERNAME=os.environ.get('MQTT_USERNAME')
+MQTT_PASSWORD=os.environ.get('MQTT_PASSWORD')
+# MQTT_BROKER=os.environ.get('MQTT_BROKER')
+# MQTT_PORT=os.environ.get('MQTT_PORT')
+# KETTLE_IP=os.environ.get('KETTLE_IP')
+# KETTLE_IMEI=os.environ.get('KETTLE_IMEI')
 
 class AppKettle:
     """Represents a phisical appKettle"""
@@ -461,6 +469,7 @@ def main_loop(host_port, imei, mqtt_broker):
         mqttc.on_message = cb_mqtt_on_message
         mqttc.user_data_set(kettle)  # passes to each callback $kettle as $userdata
         mqttc.will_set("stat/" + MQTT_BASE + "/status", "Disconnected", retain=True)
+        mqttc.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSQORD)
         mqttc.connect(mqtt_broker[0], int(mqtt_broker[1]))
         mqttc.loop_start()
 
@@ -567,8 +576,20 @@ def argparser():
     )
 
     args = parser.parse_args()
-    main_loop((args.host, args.port), args.imei, args.mqtt)
+    try:
+        if  (args.host == "None"):
+            print("Attempting to auto configure kettle")
+            kettle_socket = KettleSocket(imei=None)
+            kettle = AppKettle(kettle_socket)
+            kettle_info = kettle_socket.kettle_probe()
+            if kettle_info is not None:
+                args.host = kettle_info["kettleIP"]
+                args.imei = kettle_info["imei"]
 
+        print(args)
+        # main_loop((args.host, args.port), args.imei, args.mqtt)
+    except (TimeoutError, OSError) as err:
+            print("Auto config failed: ", err)
 
 if __name__ == "__main__":
     argparser()
