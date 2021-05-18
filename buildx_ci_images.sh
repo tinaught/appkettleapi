@@ -34,10 +34,10 @@ function setup_ci_environment::install_docker_buildx() {
     exit 1
   fi
 
-  # # uninstall old versions
-  # sudo apt-get remove -y docker docker.io containerd runc
+  # uninstall old versions
+  sudo apt-get remove -y docker docker.io containerd runc
 
-  # ## Install up-to-date version of docker, with buildx support.
+  ## Install up-to-date version of docker, with buildx support.
   # # Set up the repository
   # sudo apt-get update
   # sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
