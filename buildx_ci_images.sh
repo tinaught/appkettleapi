@@ -35,7 +35,7 @@ function setup_ci_environment::install_docker_buildx() {
   fi
 
   # uninstall old versions
-  sudo apt-get remove -y docker docker.io containerd runc
+  # sudo apt-get remove -y docker docker.io containerd runc
 
   ## Install up-to-date version of docker, with buildx support.
   # # Set up the repository
@@ -133,7 +133,7 @@ function build_ci_images::test_all() {
 # Setup ci environment
 function setup_ci_environment::main() {
   cp $DOCKERFILE Dockerfile.multi-arch
-  # setup_ci_environment::install_docker_buildx
+  setup_ci_environment::install_docker_buildx
   setup_ci_environment::login_to_docker_hub
 }
 
