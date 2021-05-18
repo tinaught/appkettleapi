@@ -34,21 +34,21 @@ function setup_ci_environment::install_docker_buildx() {
     exit 1
   fi
 
-  # uninstall old versions
-  sudo apt-get remove -y docker docker.io containerd runc
+  # # uninstall old versions
+  # sudo apt-get remove -y docker docker.io containerd runc
 
-  ## Install up-to-date version of docker, with buildx support.
-  # Set up the repository
-  sudo apt-get update
-  sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-  # Add Docker’s official GPG key
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-  echo \
-  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  # Install Docker Engine
-  sudo apt-get update
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  # ## Install up-to-date version of docker, with buildx support.
+  # # Set up the repository
+  # sudo apt-get update
+  # sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+  # # Add Docker’s official GPG key
+  # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  # echo \
+  # "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  # $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  # # Install Docker Engine
+  # sudo apt-get update
+  # sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
   # Enable docker daemon experimental support (for 'docker pull --platform').
   local -r config='/etc/docker/daemon.json'
