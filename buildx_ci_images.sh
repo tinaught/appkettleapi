@@ -133,7 +133,7 @@ function build_ci_images::test_all() {
 # Setup ci environment
 function setup_ci_environment::main() {
   cp $DOCKERFILE Dockerfile.multi-arch
-  setup_ci_environment::install_docker_buildx
+  # setup_ci_environment::install_docker_buildx
   setup_ci_environment::login_to_docker_hub
 }
 

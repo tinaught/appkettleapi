@@ -2,7 +2,7 @@ sudo: required
 services:
 - docker
 language: shell
-dist: focal
+dist: bionic
 os: linux
 env:
   global:
@@ -15,16 +15,23 @@ env:
   - secure: H+JVCTGCp0SiB9bKLjSyVEGk18Lm/R9IkIfyXTGIzOah0GQV98U0C/0N6HIIY8oLDLTshOKBm03vRJT6P33lqQNn6nFJNP0mUxnnmXhfjYMcZ0ccho7K8q1bmmmK7Ix0o5EKT7V5OPIppB1h6fB4eDi/4A9MLTm8B3pxnZ+d0qRg0uf6GmwNJwRsEbX45VuGhTChJ/EJcdmlu8vUaEdad101j6Hbv15fp3sUu7CO0JpSBvqmTzQEAI+5d+pbtpwl9UWdbmw+qPmnQBmPxqe4loE7uEU8pbHvC0m5/K/bzRDrqv356uJF55CMb0uygy306IKDKcMPy6SgKjBQkMxO1ysQJGjCy7N5fFqDyvhAwu9aDaM32zS/UEFCH+So2gEwQ66MHBlfkIQTdVRTu8NQ3CfonNfpoLkNSvbw//dqTQIyYC9kUEhuacxz9zhYC/3FIy/MmDdy0tWESh3yfhLleMuEs4h2IcBY/Cl4kvb2lOMLzsz68cXp2TNcznYyLKMNMwxXJGzmid7HWbbE2TwkM3nIjsnglQCx+I06rt8I06wBqVZhTCu0nBv/dqH3VGIeLEwKrfLg+i9/YvJm27d11whRHMJK36XBdKkkFW5sYIu3NPzyImXuiQlWK5oreZIokVC+6p+WzJR3iTE/16mBJsUEXaxtY4JMFrjjvDdCAaY=
   - secure: DYDnmK5EAEwkAFOWPJVNz7fS33gr/tYzCVE74nw01628leqi75k8z3SQzuX9N4kpEC+cGnSub4EbPsp7NjBmVRbOJdsy4FmYhauQRAsJY+LbSmM+XTa/VXcoAyGxHX5juBKsxDZgx9dYCxVhwCl3ZwVHsaz8gOUP+jGBP4OCOCGCRwUXE5AyKSCrO6RTQNKfPhh4SCIOLq+heUVa+d6t5YtvAo2PnMkveuM+1sbNfHiaG9jyXpERUQuAMOLA1Wq0nBM6mZWTarZhTmsz7CmAaY1vZE70OhTk5oqfQ5NTC0A5os7j/DGFtF+5e6gQUs5CqjGKMPE+K8qx5uRSnp0GqhQIxLy1wLqYFFDYwYpZipmJb7w2ZwdpjWKQb/Q08dTeNuqArmCOwUiWSTI7L4MAJ37wNcizGjuXi3+Q32ZCaOsorLef9L8fqa+Fl6cE2obacqMwXE9ygoE3lTOiCBpRprM9X+gJ8hTABzA5UpmUvYjDWrvkxuoS1dJbB6PPAW1llNRtj3hXiXfYLLIf4ndRYEVS9WSZziD57t5jJ4W6IcwA6ZpDEpvEvu2ghAAgeY4MIrRHS79ipq/uw6rPGxfAeS4GDajbHHTthuH1pp5Vw88NioL/3UmCsn7ukWAERRaCPpIrK2afRH9t97Ghei0jfJFLlzrqL9mPedvoZ27I1uM=
 before_install:
+  - set -e
+  # Configure environment so changes are picked up when the Docker daemon is restarted after upgrading
+  - echo '{"experimental":true}' | sudo tee /etc/docker/daemon.json
+  - export DOCKER_CLI_EXPERIMENTAL=enabled
   - sudo rm -rf /var/lib/apt/lists/*
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) edge"
   - sudo apt-get update
   - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
   - mkdir -vp ~/.docker/cli-plugins/
   - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
   - chmod a+x ~/.docker/cli-plugins/docker-buildx
-script:
-  - docker buildx version
-  - source ./buildx_ci_images.sh
-  - set -ex; setup_ci_environment::main; set +x
-  - set -ex; build_ci_images::main; set +x
+jobs:
+  include:
+    - stage: build and push docker image
+      script:
+        - docker buildx version
+        - source ./buildx_ci_images.sh
+        - set -ex; setup_ci_environment::main; set +x
+        - set -ex; build_ci_images::main; set +x
