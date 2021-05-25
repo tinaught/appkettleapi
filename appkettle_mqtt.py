@@ -48,7 +48,7 @@ MSGLEN = 3200  # max msg length: this needs to be long enough to allow a few msg
 
 KETTLE_SOCKET_CONNECT_ATTEMPTS = 3
 KETTLE_SOCKET_TIMEOUT_SECS = 60
-KEEP_WARM_MINS = 30  # Default keep warm amount
+KEEP_WARM_MINS = os.environ.get('KETTLE_KEEP_WARM_MINS')  # Env variable default keep warm amount 30 mins
 
 ENCRYPT_HEADER = bytes([0x23, 0x23, 0x38, 0x30])
 PLAIN_HEADER = bytes([0x23, 0x23, 0x30, 0x30])
@@ -56,7 +56,7 @@ MSG_KEEP_CONNECT = b"##000bKeepConnect&&"
 MSG_KEEP_CONNECT_FREQ_SECS = (
     30  # sends a KeepConnect to keep connection live (e.g. app open)
 )
-UDP_IP_BCAST = os.environ.get('KETTLE_BROADCAST_ADDRESS')
+UDP_IP_BCAST = os.environ.get('KETTLE_UDP_IP_BCAST') # Env variable default 255.255.255.255
 UDP_PORT = 15103
 
 MQTT_BASE = "appKettle"

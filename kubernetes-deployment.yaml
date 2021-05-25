@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appkettle-deployment
+  labels:
+    app: appkettle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appkettle
+  template:
+    metadata:
+      labels:
+        app: appkettle
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: appkettle
+        image: docker.io/grewhit25/appkettleapi
+        env:
+        - name: TZ
+          value: Europe/London
+        - name: MQTT_USERNAME
+          value: ''
+        - name: MQTT_PASSWORD
+          value: ''
+        - name: MQTT_BROKER
+          value: '127.0.0.1'
+        - name: MQTT_PORT
+          value: '1883'
+        - name: KETTLE_IP
+          value: 'None'
+        - name: KETTLE_IMEI
+          value: 'None'
+        - name: KETTLE_UDP_IP_BCAST
+          value: '255.255.255.255'
+        - name: KETTLE_KEEP_WARM_MINS
+          value: '30'
