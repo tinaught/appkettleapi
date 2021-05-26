@@ -34,8 +34,8 @@ import select
 import signal
 import json
 import argparse
-import paho.mqtt.client as mqtt
-from Cryptodome.Cipher import AES
+import paho.mqtt.client as mqtt     # pip install paho.mqtt
+from Cryptodome.Cipher import AES   # pip install pycryptodomex
 
 from protocol_parser import unpack_msg, calc_msg_checksum
 
@@ -58,8 +58,9 @@ MSG_KEEP_CONNECT_FREQ_SECS = (
 UDP_IP_BCAST = "255.255.255.255"
 UDP_PORT = 15103
 
-MQTT_BASE = "appKettle"
-MQTT_CMD_TOPIC = "cmnd/" + MQTT_BASE
+MQTT_BASE = "appKettle/"
+MQTT_COMMAND_TOPIC = MQTT_BASE + "command"
+MQTT_STATUS_TOPIC = MQTT_BASE + "status"
 
 # AES secrets:
 SECRET_KEY = b"ay3$&dw*ndAD!9)<"
@@ -396,7 +397,7 @@ def cb_mqtt_on_connect(client, kettle, flags, rec_code):
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe(MQTT_CMD_TOPIC + "/#")  # subscribe to all topics
+    client.subscribe(MQTT_COMMAND_TOPIC + "/#")  # subscribe to all topics
     
 
 def cb_mqtt_on_message(mqttc, kettle, msg):
@@ -404,16 +405,16 @@ def cb_mqtt_on_message(mqttc, kettle, msg):
     print("MQTT MSG: " + msg.topic + " : " + str(msg.payload))
     kettle.wake()  # wake up kettle when receiving a command
 
-    if msg.topic == MQTT_CMD_TOPIC + "/power":
+    if msg.topic == MQTT_COMMAND_TOPIC + "/power":
         if msg.payload == b"ON":
             kettle.turn_on()
         elif msg.payload == b"OFF":
             kettle.turn_off()
         else:
             print("MQTT MSG: msg not recognised:", msg)
-        mqttc.publish("stat/" + MQTT_BASE + "/power", kettle.stat["power"])
+        mqttc.publish(MQTT_STATUS_TOPIC + "/power", kettle.stat["power"])
 
-    elif msg.topic == MQTT_CMD_TOPIC + "/keep_warm_onoff":
+    elif msg.topic == MQTT_COMMAND_TOPIC + "/keep_warm_onoff":
         if msg.payload == b"True":
             kettle.stat["keep_warm_onoff"] = True
         elif msg.payload == b"False":
@@ -421,13 +422,13 @@ def cb_mqtt_on_message(mqttc, kettle, msg):
         else:
             print("MQTT MSG: msg not recognised:", msg)
         mqttc.publish(
-            "stat/" + MQTT_BASE + "/keep_warm_onoff", kettle.stat["keep_warm_onoff"]
+            MQTT_STATUS_TOPIC + "/keep_warm_onoff", kettle.stat["keep_warm_onoff"]
         )
 
-    elif msg.topic == MQTT_CMD_TOPIC + "/set_target_temp":
+    elif msg.topic == MQTT_COMMAND_TOPIC + "/set_target_temp":
         kettle.stat["set_target_temp"] = int(msg.payload)
         mqttc.publish(
-            "stat/" + MQTT_BASE + "/set_target_temp", kettle.stat["set_target_temp"]
+            MQTT_STATUS_TOPIC + "/set_target_temp", kettle.stat["set_target_temp"]
         )
 
 
@@ -462,7 +463,7 @@ def main_loop(host_port, imei, mqtt_broker):
         mqttc.on_connect = cb_mqtt_on_connect
         mqttc.on_message = cb_mqtt_on_message
         mqttc.user_data_set(kettle)  # passes to each callback $kettle as $userdata
-        mqttc.will_set("stat/" + MQTT_BASE + "/status", "Disconnected", retain=True)
+        mqttc.will_set(MQTT_STATUS_TOPIC + "/status", "Disconnected", retain=True)
         mqttc.connect(mqtt_broker[0], int(mqtt_broker[1]))
         mqttc.loop_start()
 
@@ -524,7 +525,7 @@ def main_loop(host_port, imei, mqtt_broker):
             k_msg = kettle_socket.receive()
             kettle.update_status(k_msg)
             if not mqtt_broker is None:
-                mqttc.publish("stat/" + MQTT_BASE + "/STATE", kettle.status_json())
+                mqttc.publish(MQTT_STATUS_TOPIC + "/STATE", kettle.status_json())
                 for i in [
                     "temperature",
                     "target_temp",
@@ -535,7 +536,7 @@ def main_loop(host_port, imei, mqtt_broker):
                     "keep_warm_secs",
                     "keep_warm_onoff",
                 ]:
-                    mqttc.publish("stat/" + MQTT_BASE + "/" + i, kettle.stat[i])
+                    mqttc.publish(MQTT_STATUS_TOPIC + "/" + i, kettle.stat[i])
 
         if len(outfds) != 0:
             # print("we could be writing here")
