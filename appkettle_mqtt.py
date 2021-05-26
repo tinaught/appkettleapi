@@ -48,7 +48,7 @@ MSGLEN = 3200  # max msg length: this needs to be long enough to allow a few msg
 
 KETTLE_SOCKET_CONNECT_ATTEMPTS = 3
 KETTLE_SOCKET_TIMEOUT_SECS = 60
-KEEP_WARM_MINS = os.environ.get('KETTLE_KEEP_WARM_MINS')  # Env variable default keep warm amount 30 mins
+KEEP_WARM_MINS = int(os.environ.get('KETTLE_KEEP_WARM_MINS'))  # Env variable default keep warm amount 30 mins
 
 ENCRYPT_HEADER = bytes([0x23, 0x23, 0x38, 0x30])
 PLAIN_HEADER = bytes([0x23, 0x23, 0x30, 0x30])
@@ -69,10 +69,6 @@ SECRET_IV = b"7e3*WwI(@Dczxcue"
 # get env variables
 MQTT_USERNAME=os.environ.get('MQTT_USERNAME')
 MQTT_PASSWORD=os.environ.get('MQTT_PASSWORD')
-# MQTT_BROKER=os.environ.get('MQTT_BROKER')
-# MQTT_PORT=os.environ.get('MQTT_PORT')
-# KETTLE_IP=os.environ.get('KETTLE_IP')
-# KETTLE_IMEI=os.environ.get('KETTLE_IMEI')
 
 class AppKettle:
     """Represents a phisical appKettle"""
