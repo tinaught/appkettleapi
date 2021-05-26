@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 """Provides a running daemon for interfacing with an appKettle
 
-usage: appkettle_mqtt.py [-h] [--mqtt host port] [host] [imei]
+usage: appkettle_mqtt.py [-h] [--mqtt host port username password] [host] [imei]
 
 arguments:
   host              kettle host or IP
@@ -9,7 +9,7 @@ arguments:
 
 optional arguments:
   -h, --help        show this help message and exit
-  --mqtt host port  MQTT broker host and port (e.g. --mqtt 192.168.0.1 1883)
+  --mqtt host port  MQTT broker host, port, username & password (e.g. --mqtt 192.168.0.1 1883 mqtt_user p@55w0Rd)
 
 By default the both kettle and app talk via the cloud. Blocking internet access to
 the kettle host triggers communication on local network
@@ -35,7 +35,7 @@ import signal
 import json
 import argparse
 import paho.mqtt.client as mqtt
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
 
 from protocol_parser import unpack_msg, calc_msg_checksum
 
@@ -397,7 +397,7 @@ def cb_mqtt_on_connect(client, kettle, flags, rec_code):
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     client.subscribe(MQTT_CMD_TOPIC + "/#")  # subscribe to all topics
-
+    
 
 def cb_mqtt_on_message(mqttc, kettle, msg):
     """ The callback for when a PUBLISH message is received from the server. """
@@ -446,7 +446,7 @@ def main_loop(host_port, imei, mqtt_broker):
     Args:
         host_port: tuple with the kettle host and port
         imei: kettle IMEI
-        mqtt_broker: tuple with mqtt broker and port
+        mqtt_broker: array with mqtt broker ip, port, username & password
     """
 
     kettle_socket = KettleSocket(imei=imei)
@@ -457,6 +457,8 @@ def main_loop(host_port, imei, mqtt_broker):
 
     if not mqtt_broker is None:
         mqttc = mqtt.Client()
+        if not mqtt_broker[2] is None:
+            mqttc.username_pw_set(mqtt_broker[2], password=mqtt_broker[3])
         mqttc.on_connect = cb_mqtt_on_connect
         mqttc.on_message = cb_mqtt_on_message
         mqttc.user_data_set(kettle)  # passes to each callback $kettle as $userdata
@@ -561,9 +563,9 @@ def argparser():
 
     parser.add_argument(
         "--mqtt",
-        help="MQTT broker host and port (e.g. --mqtt 192.168.0.1 1883)",
-        nargs=2,
-        metavar=("host", "port"),
+        help="MQTT broker host, port, username & password (e.g. --mqtt 192.168.0.1 1883 mqtt_user p@55w0Rd)",
+        nargs=4,
+        metavar=("host", "port", "username", "password"),
     )
 
     args = parser.parse_args()
