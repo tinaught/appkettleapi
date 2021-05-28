@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 """Provides a running daemon for interfacing with an appKettle
 
-usage: appkettle_mqtt.py [-h] [--mqtt host port] [host] [imei]
+usage: appkettle_mqtt.py [-h] [--mqtt host port username password] [host] [imei]
 
 arguments:
   host              kettle host or IP
@@ -9,7 +9,7 @@ arguments:
 
 optional arguments:
   -h, --help        show this help message and exit
-  --mqtt host port  MQTT broker host and port (e.g. --mqtt 192.168.0.1 1883)
+  --mqtt host port  MQTT broker host, port, username & password (e.g. --mqtt 192.168.0.1 1883 mqtt_user p@55w0Rd)
 
 By default the both kettle and app talk via the cloud. Blocking internet access to
 the kettle host triggers communication on local network
@@ -34,8 +34,8 @@ import select
 import signal
 import json
 import argparse
-import paho.mqtt.client as mqtt
-from Crypto.Cipher import AES
+import paho.mqtt.client as mqtt     # pip install paho.mqtt
+from Cryptodome.Cipher import AES   # pip install pycryptodomex
 
 from protocol_parser import unpack_msg, calc_msg_checksum
 
@@ -58,8 +58,9 @@ MSG_KEEP_CONNECT_FREQ_SECS = (
 UDP_IP_BCAST = "255.255.255.255"
 UDP_PORT = 15103
 
-MQTT_BASE = "appKettle"
-MQTT_CMD_TOPIC = "cmnd/" + MQTT_BASE
+MQTT_BASE = "appKettle/"
+MQTT_COMMAND_TOPIC = MQTT_BASE + "command"
+MQTT_STATUS_TOPIC = MQTT_BASE + "status"
 
 # AES secrets:
 SECRET_KEY = b"ay3$&dw*ndAD!9)<"
@@ -396,24 +397,24 @@ def cb_mqtt_on_connect(client, kettle, flags, rec_code):
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe(MQTT_CMD_TOPIC + "/#")  # subscribe to all topics
-
+    client.subscribe(MQTT_COMMAND_TOPIC + "/#")  # subscribe to all topics
+    
 
 def cb_mqtt_on_message(mqttc, kettle, msg):
     """ The callback for when a PUBLISH message is received from the server. """
     print("MQTT MSG: " + msg.topic + " : " + str(msg.payload))
     kettle.wake()  # wake up kettle when receiving a command
 
-    if msg.topic == MQTT_CMD_TOPIC + "/power":
+    if msg.topic == MQTT_COMMAND_TOPIC + "/power":
         if msg.payload == b"ON":
             kettle.turn_on()
         elif msg.payload == b"OFF":
             kettle.turn_off()
         else:
             print("MQTT MSG: msg not recognised:", msg)
-        mqttc.publish("stat/" + MQTT_BASE + "/power", kettle.stat["power"])
+        mqttc.publish(MQTT_STATUS_TOPIC + "/power", kettle.stat["power"])
 
-    elif msg.topic == MQTT_CMD_TOPIC + "/keep_warm_onoff":
+    elif msg.topic == MQTT_COMMAND_TOPIC + "/keep_warm_onoff":
         if msg.payload == b"True":
             kettle.stat["keep_warm_onoff"] = True
         elif msg.payload == b"False":
@@ -421,13 +422,13 @@ def cb_mqtt_on_message(mqttc, kettle, msg):
         else:
             print("MQTT MSG: msg not recognised:", msg)
         mqttc.publish(
-            "stat/" + MQTT_BASE + "/keep_warm_onoff", kettle.stat["keep_warm_onoff"]
+            MQTT_STATUS_TOPIC + "/keep_warm_onoff", kettle.stat["keep_warm_onoff"]
         )
 
-    elif msg.topic == MQTT_CMD_TOPIC + "/set_target_temp":
+    elif msg.topic == MQTT_COMMAND_TOPIC + "/set_target_temp":
         kettle.stat["set_target_temp"] = int(msg.payload)
         mqttc.publish(
-            "stat/" + MQTT_BASE + "/set_target_temp", kettle.stat["set_target_temp"]
+            MQTT_STATUS_TOPIC + "/set_target_temp", kettle.stat["set_target_temp"]
         )
 
 
@@ -446,7 +447,7 @@ def main_loop(host_port, imei, mqtt_broker):
     Args:
         host_port: tuple with the kettle host and port
         imei: kettle IMEI
-        mqtt_broker: tuple with mqtt broker and port
+        mqtt_broker: array with mqtt broker ip, port, username & password
     """
 
     kettle_socket = KettleSocket(imei=imei)
@@ -457,10 +458,12 @@ def main_loop(host_port, imei, mqtt_broker):
 
     if not mqtt_broker is None:
         mqttc = mqtt.Client()
+        if not mqtt_broker[2] is None:
+            mqttc.username_pw_set(mqtt_broker[2], password=mqtt_broker[3])
         mqttc.on_connect = cb_mqtt_on_connect
         mqttc.on_message = cb_mqtt_on_message
         mqttc.user_data_set(kettle)  # passes to each callback $kettle as $userdata
-        mqttc.will_set("stat/" + MQTT_BASE + "/status", "Disconnected", retain=True)
+        mqttc.will_set(MQTT_STATUS_TOPIC + "/status", "Disconnected", retain=True)
         mqttc.connect(mqtt_broker[0], int(mqtt_broker[1]))
         mqttc.loop_start()
 
@@ -513,7 +516,11 @@ def main_loop(host_port, imei, mqtt_broker):
     while True:
         if not kettle_socket.connected:
             kettle_socket.connect(host_port)
-            print("Connected succesfully to socket on host", host_port[0])
+            if kettle_socket.connected:
+                print("Connected succesfully to socket on host", host_port[0])
+            else:
+                print("Could not connect to socket on host", host_port[0])
+                continue
 
         inout = [kettle_socket.sock]
         infds, outfds, errfds = select.select(inout, inout, [], 120)
@@ -522,7 +529,7 @@ def main_loop(host_port, imei, mqtt_broker):
             k_msg = kettle_socket.receive()
             kettle.update_status(k_msg)
             if not mqtt_broker is None:
-                mqttc.publish("stat/" + MQTT_BASE + "/STATE", kettle.status_json())
+                mqttc.publish(MQTT_STATUS_TOPIC + "/STATE", kettle.status_json())
                 for i in [
                     "temperature",
                     "target_temp",
@@ -533,7 +540,7 @@ def main_loop(host_port, imei, mqtt_broker):
                     "keep_warm_secs",
                     "keep_warm_onoff",
                 ]:
-                    mqttc.publish("stat/" + MQTT_BASE + "/" + i, kettle.stat[i])
+                    mqttc.publish(MQTT_STATUS_TOPIC + "/" + i, kettle.stat[i])
 
         if len(outfds) != 0:
             # print("we could be writing here")
@@ -561,9 +568,9 @@ def argparser():
 
     parser.add_argument(
         "--mqtt",
-        help="MQTT broker host and port (e.g. --mqtt 192.168.0.1 1883)",
-        nargs=2,
-        metavar=("host", "port"),
+        help="MQTT broker host, port, username & password (e.g. --mqtt 192.168.0.1 1883 mqtt_user p@55w0Rd)",
+        nargs=4,
+        metavar=("host", "port", "username", "password"),
     )
 
     args = parser.parse_args()
