@@ -516,7 +516,11 @@ def main_loop(host_port, imei, mqtt_broker):
     while True:
         if not kettle_socket.connected:
             kettle_socket.connect(host_port)
-            print("Connected succesfully to socket on host", host_port[0])
+            if kettle_socket.connected:
+                print("Connected succesfully to socket on host", host_port[0])
+            else:
+                print("Could not connect to socket on host", host_port[0])
+                continue
 
         inout = [kettle_socket.sock]
         infds, outfds, errfds = select.select(inout, inout, [], 120)
